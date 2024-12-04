@@ -1,0 +1,114 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  STUDENT
+  TEACHER
+  ADMIN
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  password      String?
+  image         String?
+  role          UserRole  @default(STUDENT)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  enrollments   Enrollment[]
+  teacherCourses Course[]    @relation("TeacherCourses")
+  assignments   Assignment[] @relation("StudentAssignments")
+  submissions   Submission[]
+  createdAssignments Assignment[] @relation("TeacherAssignments")
+}
+
+model Course {
+  id          String    @id @default(cuid())
+  title       String
+  description String
+  grade       Int
+  subject     String
+  imageUrl    String?
+  published   Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  teacher     User      @relation("TeacherCourses", fields: [teacherId], references: [id])
+  teacherId   String
+  enrollments Enrollment[]
+  lessons     Lesson[]
+  assignments Assignment[]
+}
+
+model Lesson {
+  id          String    @id @default(cuid())
+  title       String
+  content     String
+  videoUrl    String?
+  order       Int
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  course      Course    @relation(fields: [courseId], references: [id])
+  courseId    String
+}
+
+model Enrollment {
+  id        String    @id @default(cuid())
+  progress  Float     @default(0)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  // Relations
+  student   User      @relation(fields: [studentId], references: [id])
+  studentId String
+  course    Course    @relation(fields: [courseId], references: [id])
+  courseId  String
+
+  @@unique([studentId, courseId])
+}
+
+model Assignment {
+  id          String    @id @default(cuid())
+  title       String
+  description String
+  dueDate     DateTime
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  course      Course    @relation(fields: [courseId], references: [id])
+  courseId    String
+  teacher     User      @relation("TeacherAssignments", fields: [teacherId], references: [id])
+  teacherId   String
+  students    User[]    @relation("StudentAssignments")
+  submissions Submission[]
+}
+
+model Submission {
+  id          String    @id @default(cuid())
+  content     String
+  grade       Float?
+  feedback    String?
+  submittedAt DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  assignment  Assignment @relation(fields: [assignmentId], references: [id])
+  assignmentId String
+  student     User      @relation(fields: [studentId], references: [id])
+  studentId   String
+
+  @@unique([studentId, assignmentId])
+}
